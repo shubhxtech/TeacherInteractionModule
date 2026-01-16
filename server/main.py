@@ -15,22 +15,16 @@ def get_local_ip():
         return "127.0.0.1"
 
 def run_flask(host_ip):
-    # Try to use eventlet for better stability if installed
-    try:
-        import eventlet
-        from eventlet import wsgi
-        print("Using Eventlet for server stability")
-        eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app)
-    except ImportError:
-        print("Eventlet not found, falling back to standard Flask server")
-        socketio.run(
-            app, 
-            host='0.0.0.0', 
-            port=5000, 
-            debug=False, 
-            use_reloader=False,
-            allow_unsafe_werkzeug=True
-        )
+    # Run Flask-SocketIO server with threading mode
+    # This is the most stable configuration for Windows
+    socketio.run(
+        app, 
+        host='0.0.0.0', 
+        port=5000, 
+        debug=False, 
+        use_reloader=False,
+        log_output=False  # Reduce noise in logs
+    )
 
 if __name__ == "__main__":
     host_ip = get_local_ip()

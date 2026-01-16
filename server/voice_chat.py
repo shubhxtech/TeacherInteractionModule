@@ -215,6 +215,21 @@ class VoiceChat:
                     except: pass
                     self.connection = None
 
+    def force_disconnect_client(self):
+        """Forcefully disconnect the current voice client."""
+        with self.lock:
+            if self.connection or self.client_connected:
+                print("Force disconnecting voice client...")
+                self.client_connected = False  # Signal threads to stop
+                
+                if self.connection:
+                    try:
+                        self.connection.close()
+                    except: pass
+                    self.connection = None
+                
+                self.status_var.set("Voice Chat: Waiting for connection...")
+
     def send_audio(self):
         """Send microphone input to client."""
         packets_sent = 0

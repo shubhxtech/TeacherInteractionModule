@@ -10,6 +10,9 @@ from voice_chat import VoiceChat
 from connection_manager import ConnectionRequestPanel, ConnectedClientPanel
 from server import socketio, coordinates_queue, connected_clients
 
+# Global reference for connection_manager to access voice_chat
+whiteboard_instance = None
+
 class CollaborativeWhiteboard:
     def __init__(self, root, host_ip):
         self.root = root
@@ -21,8 +24,27 @@ class CollaborativeWhiteboard:
         self.main_frame.pack(fill="both", expand=True)
         
         # Create left panel for tools and controls
-        self.left_panel = Frame(self.main_frame, width=200, bg="#f0f0f0")
-        self.left_panel.pack(side="left", fill="y", padx=5, pady=5)
+        self.left_panel_container = Frame(self.main_frame, width=280, bg="#f0f0f0")
+        self.left_panel_container.pack(side="left", fill="y", padx=5, pady=5)
+        
+        # Setup Scrollbar for left panel
+        self.left_canvas = Canvas(self.left_panel_container, width=260, bg="#f0f0f0", highlightthickness=0)
+        self.left_scrollbar = ttk.Scrollbar(self.left_panel_container, orient="vertical", command=self.left_canvas.yview)
+        
+        self.scrollable_frame = Frame(self.left_canvas, bg="#f0f0f0")
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.left_canvas.configure(scrollregion=self.left_canvas.bbox("all"))
+        )
+        
+        self.left_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.left_canvas.configure(yscrollcommand=self.left_scrollbar.set)
+        
+        self.left_canvas.pack(side="left", fill="both", expand=True)
+        self.left_scrollbar.pack(side="right", fill="y")
+        
+        # Use scrollable_frame as the parent for all controls
+        self.left_panel = self.scrollable_frame
         
         # Create right panel for canvas
         self.right_panel = Frame(self.main_frame)
@@ -92,6 +114,9 @@ class CollaborativeWhiteboard:
         Label(width_frame, text="Size:", bg="#f0f0f0").pack(side="left")
         Scale(width_frame, from_=1, to=10, orient=HORIZONTAL, command=self.set_line_width, bg="#f0f0f0").pack(side="left", fill="x", expand=True)
 
+        # Initialize drawing attributes
+        self.pen_color = "blue"
+        self.line_width = 3
         
         # PDF Controls
         self.pdf_frame = Frame(self.left_panel, bg="#f0f0f0")
@@ -475,8 +500,10 @@ class CollaborativeWhiteboard:
 
     def process_coordinates(self):
         """Process coordinates from the queue."""
+        processed_count = 0
         while not coordinates_queue.empty():
             data = coordinates_queue.get()
+            processed_count += 1
             # Coordinates are already normalized (0-1)
             x = data["x"] 
             y = data["y"]
@@ -484,6 +511,10 @@ class CollaborativeWhiteboard:
             line_width = data.get("line_width", self.line_width)
             pen_color = data.get("pen_color", self.pen_color)
             self.draw_point(x, y, is_start, line_width, pen_color)
+        
+        if processed_count > 0:
+            print(f"Processed {processed_count} student coordinates")
+        
         self.root.after(50, self.process_coordinates)
     
     def cleanup(self):
@@ -495,9 +526,11 @@ class CollaborativeWhiteboard:
 
 def run_tkinter(host_ip):
     """Start the Tkinter GUI."""
+    global whiteboard_instance
     root = Tk()
     root.geometry("1200x700")
     whiteboard_app = CollaborativeWhiteboard(root, host_ip)
+    whiteboard_instance = whiteboard_app  # Set global reference
     
     # Handle cleanup when window is closed
     def on_closing():

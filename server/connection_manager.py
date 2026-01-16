@@ -84,6 +84,8 @@ class ConnectionRequestPanel:
         self.pending_requests = valid_requests
 
         # 2. Add new requests from queue to the LIST
+        queue_size_before = connection_requests.qsize()
+        requests_added = 0
         while not connection_requests.empty():
             request = connection_requests.get()
             client_id = request["client_id"]
@@ -99,6 +101,10 @@ class ConnectionRequestPanel:
                 else:
                     # Append to list - No overwriting!
                     self.pending_requests.append(request)
+                    requests_added += 1
+        
+        if queue_size_before > 0:
+            print(f"Processed {queue_size_before} requests from queue, added {requests_added} to pending list")
 
         # 3. Save selection (by client_id)
         selected_client_ids = set()
@@ -276,23 +282,34 @@ class ConnectedClientPanel:
         self.frame.after(3000, self.refresh_list)
 
     def disconnect_selected(self):
-        """Disconnect selected clients."""
+        """Revoke permissions for selected clients."""
         selected_indexes = self.client_list.curselection()
         if not selected_indexes: return
 
         for idx in selected_indexes:
             sid = self.index_to_sid.get(idx)
             if sid:
-                print(f"Force disconnecting student: {sid}")
+                print(f"Revoking permissions for student: {sid}")
                 try:
-                    # Notify client first
-                    socketio.emit("force_disconnect", room=sid) 
-                    socketio.server.disconnect(sid)
+                    # Remove from connected_clients (revoke edit permission)
+                    if sid in connected_clients:
+                        connected_clients.remove(sid)
+                    
+                    # Notify client their permission was revoked
+                    socketio.emit("force_disconnect", room=sid)
+                    
+                    # Disconnect voice chat
+                    print("Attempting to disconnect voice chat...")
+                    try:
+                        from whiteboard import whiteboard_instance
+                        if whiteboard_instance and whiteboard_instance.voice_chat:
+                            print("Calling force_disconnect_client()...")
+                            whiteboard_instance.voice_chat.force_disconnect_client()
+                    except Exception as ve:
+                        print(f"Error disconnecting voice: {ve}")
+                        
                 except Exception as e:
-                    print(f"Error disconnecting {sid}: {e}")
-                
-                if sid in connected_clients:
-                    connected_clients.remove(sid)
+                    print(f"Error revoking permissions for {sid}: {e}")
         
         self.refresh_list()
 

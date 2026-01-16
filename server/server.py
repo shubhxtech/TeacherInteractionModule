@@ -11,9 +11,11 @@ app = Flask(__name__)
 socketio = SocketIO(
     app, 
     cors_allowed_origins="*",
-    ping_timeout=120,  # Match server ping timeout
-    ping_interval=25,  # Match server ping interval
-    async_mode='threading'
+    ping_timeout=120,
+    ping_interval=25,
+    async_mode='gevent',  # Use gevent for better WebSocket stability
+    logger=False,
+    engineio_logger=False
 )
 
 # Queue for coordinates
@@ -80,6 +82,7 @@ def handle_edit_permission(data):
     question = data.get("question", "Requesting access")
     
     print(f"Edit permission request from {client_id}: {question}")
+    print(f"Current queue size before adding: {connection_requests.qsize()}")
     
     # Add to connection request queue
     connection_requests.put({
@@ -89,6 +92,8 @@ def handle_edit_permission(data):
         "status": "pending",
         "question": question
     })
+    
+    print(f"Request added to queue. New queue size: {connection_requests.qsize()}")
 @socketio.on("allow_student")
 def allowStudent(client_id):
     socketio.emit("allow_student", {"allowed_sid": client_id})
@@ -117,6 +122,26 @@ def handle_viewport_registration(data):
         height = data.get("height", 0)
         client_viewports[client_id] = {"width": width, "height": height}
         # print(f"Client {client_id} registered viewport: {width}x{height}")
+
+@socketio.on("client_disconnect")
+def handle_client_disconnect():
+    """Handle client-initiated disconnect (Exit button)."""
+    client_id = request.sid
+    print(f"Client {client_id} requested disconnect")
+    
+    # Remove from connected clients
+    if client_id in connected_clients:
+        connected_clients.remove(client_id)
+        print(f"Removed {client_id} from connected_clients")
+    
+    # Disconnect voice chat
+    try:
+        from whiteboard import whiteboard_instance
+        if whiteboard_instance and whiteboard_instance.voice_chat:
+            whiteboard_instance.voice_chat.force_disconnect_client()
+            print("Voice chat disconnected")
+    except Exception as e:
+        print(f"Error disconnecting voice: {e}")
 
 @socketio.on("disconnect")
 def handle_disconnect():
