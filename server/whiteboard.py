@@ -23,12 +23,13 @@ class CollaborativeWhiteboard:
         self.main_frame = Frame(root)
         self.main_frame.pack(fill="both", expand=True)
         
-        # Create left panel for tools and controls
-        self.left_panel_container = Frame(self.main_frame, width=280, bg="#f0f0f0")
+        # Create left panel for tools and controls (fixed width to fit content)
+        self.left_panel_container = Frame(self.main_frame, width=320, bg="#f0f0f0")
         self.left_panel_container.pack(side="left", fill="y", padx=5, pady=5)
+        self.left_panel_container.pack_propagate(False)  # Prevent shrinking
         
         # Setup Scrollbar for left panel
-        self.left_canvas = Canvas(self.left_panel_container, width=260, bg="#f0f0f0", highlightthickness=0)
+        self.left_canvas = Canvas(self.left_panel_container, width=300, bg="#f0f0f0", highlightthickness=0)
         self.left_scrollbar = ttk.Scrollbar(self.left_panel_container, orient="vertical", command=self.left_canvas.yview)
         
         self.scrollable_frame = Frame(self.left_canvas, bg="#f0f0f0")
@@ -46,7 +47,7 @@ class CollaborativeWhiteboard:
         # Use scrollable_frame as the parent for all controls
         self.left_panel = self.scrollable_frame
         
-        # Create right panel for canvas
+        # Create right panel for canvas (takes remaining space)
         self.right_panel = Frame(self.main_frame)
         self.right_panel.pack(side="right", fill="both", expand=True)
         
@@ -528,7 +529,8 @@ def run_tkinter(host_ip):
     """Start the Tkinter GUI."""
     global whiteboard_instance
     root = Tk()
-    root.geometry("1200x700")
+    root.geometry("1400x800")
+    root.minsize(1200, 700)  # Minimum size to ensure UI is usable
     whiteboard_app = CollaborativeWhiteboard(root, host_ip)
     whiteboard_instance = whiteboard_app  # Set global reference
     
