@@ -1,0 +1,22 @@
+Starting verification...
+Importing voice_chat...
+FAILED to import voice_chat: No module named 'pyaudio'
+Traceback (most recent call last):
+  File "C:\Users\ashas\Desktop\Teacher APP final\verify_syntax.py", line 19, in <module>
+    import voice_chat
+  File "C:\Users\ashas\Desktop\Teacher APP final\server\voice_chat.py", line 2, in <module>
+    import pyaudio
+ModuleNotFoundError: No module named 'pyaudio'
+
+Importing connection_manager...
+FAILED to import connection_manager: No module named 'flask_socketio'
+Traceback (most recent call last):
+  File "C:\Users\ashas\Desktop\Teacher APP final\verify_syntax.py", line 28, in <module>
+    import connection_manager
+  File "C:\Users\ashas\Desktop\Teacher APP final\server\connection_manager.py", line 4, in <module>
+    from server import connection_requests, connected_clients, socketio
+  File "C:\Users\ashas\Desktop\Teacher APP final\server\server.py", line 2, in <module>
+    from flask_socketio import SocketIO
+ModuleNotFoundError: No module named 'flask_socketio'
+
+Verification complete.
