@@ -1,4 +1,4 @@
-from tkinter import Tk, Canvas, Button, filedialog, ttk, Frame, Label, StringVar, Scale, HORIZONTAL, IntVar
+from tkinter import Tk, Canvas, Button, filedialog, ttk, Frame, Label, StringVar, Scale, HORIZONTAL, IntVar, Entry
 import time
 import threading
 import io
@@ -41,6 +41,13 @@ class CollaborativeWhiteboard:
         self.left_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         self.left_canvas.configure(yscrollcommand=self.left_scrollbar.set)
         
+        # Enable mouse wheel scrolling
+        def on_mousewheel(event):
+            self.left_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        # Bind mouse wheel to canvas and all child widgets
+        self.left_canvas.bind_all("<MouseWheel>", on_mousewheel)
+        
         self.left_canvas.pack(side="left", fill="both", expand=True)
         self.left_scrollbar.pack(side="right", fill="y")
         
@@ -48,29 +55,37 @@ class CollaborativeWhiteboard:
         self.left_panel = self.scrollable_frame
         
         # Create right panel for canvas (takes remaining space)
-        self.right_panel = Frame(self.main_frame)
+        self.right_panel = Frame(self.main_frame, bg="white")
         self.right_panel.pack(side="right", fill="both", expand=True)
         
-        # Canvas Setup
+        # Canvas Setup - Make it fully responsive
+        self.canvas = Canvas(self.right_panel, bg="white", highlightthickness=0)
+        self.canvas.pack(fill="both", expand=True)
+        
+        # Dynamic canvas dimensions (will be updated on window resize)
         self.canvas_width = 1280
         self.canvas_height = 720
-        self.canvas = Canvas(self.right_panel, bg="white", width=self.canvas_width, height=self.canvas_height)
-        self.canvas.pack(fill="both", expand=True)
+        
+        # Bind to window resize to update canvas and re-render PDF
+        self.root.bind("<Configure>", self.on_window_resize)
+        self.resize_pending = False
         
         # Initialize the voice chat
         self.voice_chat = VoiceChat(host_ip)
         
-        # Create connection panel
-        self.connection_frame = Frame(self.left_panel, bg="#f0f0f0")
-        self.connection_frame.pack(fill="x", padx=5, pady=10)
+        # Create connection panel with modern styling
+        self.connection_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
+        self.connection_frame.pack(fill="x", padx=10, pady=(10,5))
         
-        Label(self.connection_frame, text="Connection Controls", font=("Arial", 12, "bold"), bg="#f0f0f0").pack(pady=5)
+        Label(self.connection_frame, text="📡 Server Info", font=("Arial", 11, "bold"), 
+              bg="white", fg="#2c3e50").pack(pady=(8,4))
         
-        # IP Display
-        ip_frame = Frame(self.connection_frame, bg="#f0f0f0")
-        ip_frame.pack(fill="x", pady=5)
-        Label(ip_frame, text="Your IP:", bg="#f0f0f0").pack(side="left")
-        Label(ip_frame, text=host_ip, bg="#f0f0f0", fg="blue").pack(side="left")
+        # IP Display with better styling
+        ip_frame = Frame(self.connection_frame, bg="white")
+        ip_frame.pack(pady=4)
+        Label(ip_frame, text="Server IP:", font=("Arial", 9), bg="white", fg="#7f8c8d").pack(side="left")
+        Label(ip_frame, text=f" {host_ip}", font=("Arial", 9, "bold"), 
+              bg="white", fg="#27ae60").pack(side="left")
         
         # Connection Buttons
         btn_frame = Frame(self.connection_frame, bg="#f0f0f0")
@@ -78,13 +93,14 @@ class CollaborativeWhiteboard:
         
         ttk.Button(btn_frame, text="Disconnect Voice", command=self.disconnect_voice).pack(side="left", padx=2)
         
-        # Status display
-        ttk.Label(self.connection_frame, textvariable=self.voice_chat.status_var).pack(pady=5)
+        # Status display with better styling
+        Label(self.connection_frame, textvariable=self.voice_chat.status_var,
+              font=("Arial", 8), bg="white", fg="#7f8c8d").pack(pady=2)
         
         # Connected clients display
-        self.clients_var = StringVar()
-        self.clients_var.set("Connected Clients: 0")
-        ttk.Label(self.connection_frame, textvariable=self.clients_var).pack(pady=5)
+        self.clients_var = StringVar(value="Connected Clients: 0")
+        Label(self.connection_frame, textvariable=self.clients_var, 
+              font=("Arial", 9), bg="white", fg="#3498db").pack(pady=(2,8))
         
         
         # Add connection request panel
@@ -93,54 +109,69 @@ class CollaborativeWhiteboard:
         # Add connected clients panel (Active Students)
         self.connected_client_panel = ConnectedClientPanel(self.left_panel)
         
-        # Drawing Tools
-        self.drawing_frame = Frame(self.left_panel, bg="#f0f0f0")
-        self.drawing_frame.pack(fill="x", padx=5, pady=10)
+        # Drawing Tools with modern styling
+        self.drawing_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
+        self.drawing_frame.pack(fill="x", padx=10, pady=5)
         
-        Label(self.drawing_frame, text="Drawing Tools", font=("Arial", 12, "bold"), bg="#f0f0f0").pack(pady=5)
+        Label(self.drawing_frame, text="🎨 Drawing Tools", font=("Arial", 11, "bold"), 
+              bg="white", fg="#2c3e50").pack(pady=(8,4))
         
+        # Pen Colors with emoji labels
+        Label(self.drawing_frame, text="Pen Color:", font=("Arial", 9), bg="white").pack(pady=(4,2))
+        colors_frame = Frame(self.drawing_frame, bg="white")
+        colors_frame.pack(pady=4)
         
-        # Pen Colors
-        colors_frame = Frame(self.drawing_frame, bg="#f0f0f0")
-        colors_frame.pack(fill="x", pady=2)
-        
-        colors = [("Black", "black"), ("Blue", "blue"), ("Red", "red"), ("Green", "green")]
-        for name, col in colors:
-            btn = Button(colors_frame, bg=col, width=2, command=lambda c=col: self.set_pen_color(c))
+        colors = [("⚫", "black"), ("🔴", "red"), ("🔵", "blue"), ("🟢", "green"), ("🟡", "yellow")]
+        for emoji, col in colors:
+            btn = Button(colors_frame, text=emoji, width=3, height=1,
+                        command=lambda c=col: self.set_pen_color(c),
+                        relief="raised", borderwidth=2)
             btn.pack(side="left", padx=2)
             
-        # Line Width
-        width_frame = Frame(self.drawing_frame, bg="#f0f0f0")
-        width_frame.pack(fill="x", pady=5)
-        Label(width_frame, text="Size:", bg="#f0f0f0").pack(side="left")
-        Scale(width_frame, from_=1, to=10, orient=HORIZONTAL, command=self.set_line_width, bg="#f0f0f0").pack(side="left", fill="x", expand=True)
+        # Line Width with better styling
+        Label(self.drawing_frame, text="Line Thickness:", font=("Arial", 9), bg="white").pack(pady=(8,2))
+        width_frame = Frame(self.drawing_frame, bg="white")
+        width_frame.pack(fill="x", padx=15, pady=(0,8))
+        Scale(width_frame, from_=1, to=10, orient=HORIZONTAL, 
+              command=self.set_line_width, bg="white", showvalue=True).pack(fill="x")
 
         # Initialize drawing attributes
         self.pen_color = "blue"
         self.line_width = 3
         
-        # PDF Controls
-        self.pdf_frame = Frame(self.left_panel, bg="#f0f0f0")
-        self.pdf_frame.pack(fill="x", padx=5, pady=10)
+        # PDF Controls with modern styling
+        self.pdf_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
+        self.pdf_frame.pack(fill="x", padx=10, pady=5)
         
-        Label(self.pdf_frame, text="PDF Controls", font=("Arial", 12, "bold"), bg="#f0f0f0").pack(pady=5)
+        Label(self.pdf_frame, text="📄 PDF Controls", font=("Arial", 11, "bold"), 
+              bg="white", fg="#2c3e50").pack(pady=(8,4))
         
-        # PDF Navigation - Horizontal row
-        nav_frame = Frame(self.pdf_frame, bg="#f0f0f0")
-        nav_frame.pack(fill="x", pady=5)
+        # PDF Navigation - Horizontal row with better styling
+        nav_frame = Frame(self.pdf_frame, bg="white")
+        nav_frame.pack(pady=8)
         
         self.page_var = IntVar(value=1)
         self.total_pages_var = StringVar(value="/ 0")
         
         ttk.Button(nav_frame, text="◀", width=3, command=self.previous_page).pack(side="left", padx=2)
-        Label(nav_frame, textvariable=self.page_var, bg="#f0f0f0", width=3).pack(side="left")
-        Label(nav_frame, textvariable=self.total_pages_var, bg="#f0f0f0").pack(side="left")
+        
+        page_display = Frame(nav_frame, bg="white")
+        page_display.pack(side="left", padx=8)
+        Entry(page_display, textvariable=self.page_var, width=4, justify="center",
+              font=("Arial", 10)).pack(side="left")
+        Label(page_display, textvariable=self.total_pages_var, 
+              font=("Arial", 10), bg="white").pack(side="left")
+        
         ttk.Button(nav_frame, text="▶", width=3, command=self.next_page).pack(side="left", padx=2)
         
-        # PDF Action Buttons - Vertical stack to prevent clipping
-        ttk.Button(self.pdf_frame, text="📄 Upload PDF", command=self.upload_pdf).pack(fill="x", pady=2)
-        ttk.Button(self.pdf_frame, text="🗑️ Clear Annotations", command=self.clear_annotations).pack(fill="x", pady=2)
-        ttk.Button(self.pdf_frame, text="❌ Clear All", command=self.clear_all).pack(fill="x", pady=2)
+        # PDF Action Buttons - Better layout
+        btn_container = Frame(self.pdf_frame, bg="white")
+        btn_container.pack(pady=4, padx=8)
+        
+        ttk.Button(btn_container, text="📤 Upload PDF", command=self.upload_pdf).pack(side="left", padx=2)
+        ttk.Button(btn_container, text="🗑️ Clear All", command=self.clear_all).pack(side="left", padx=2)
+        
+        Frame(self.pdf_frame, bg="white", height=8).pack()  # Bottom padding
 
         
         # Drawing variables
@@ -163,11 +194,11 @@ class CollaborativeWhiteboard:
         self.canvas.bind("<B1-Motion>", self.draw)
         self.canvas.bind("<ButtonRelease-1>", self.stop_draw)
         
-        # Start the coordinate processing
-        self.root.after(50, self.process_coordinates)
+        # Start the coordinate processing (reduced frequency for better performance)
+        self.root.after(100, self.process_coordinates)
         # Start audio level update
         # Start connected clients counter update
-        self.root.after(500, self.update_client_count)
+        self.root.after(1000, self.update_client_count)
         # Start connection request panel refresh
         self.root.after(2000, self.refresh_connection_requests)
         
@@ -228,7 +259,7 @@ class CollaborativeWhiteboard:
         """Update the connected clients counter"""
         count = len(connected_clients)
         self.clients_var.set(f"Connected Clients: {count}")
-        self.root.after(2000, self.update_client_count)
+        self.root.after(1000, self.update_client_count)
     
     def disconnect_voice(self):
         """Disconnect the voice chat"""
@@ -294,11 +325,13 @@ class CollaborativeWhiteboard:
         norm_x = max(0, min(1, norm_x))
         norm_y = max(0, min(1, norm_y))
         
-        # Draw a line segment
+        # Draw a line segment with smooth, rounded appearance
         if self.prev_x is not None and self.prev_y is not None:
             self.canvas.create_line(
                 self.prev_x, self.prev_y, x, y, 
-                fill=self.pen_color, width=self.line_width, tags="annotation"
+                fill=self.pen_color, width=self.line_width,
+                capstyle="round", joinstyle="round",
+                tags="annotation"
             )
         
         # Draw endpoint
@@ -400,19 +433,40 @@ class CollaborativeWhiteboard:
             
             img_resized = img.resize((new_width, new_height), Image.LANCZOS)
             
-            # Calculate offsets for centering
+            # SAVE old dimensions BEFORE updating (for scaling annotations)
+            old_image_width = getattr(self, 'image_width', new_width)
+            old_image_height = getattr(self, 'image_height', new_height)  
+            old_x_offset = getattr(self, 'x_offset', (self.canvas_width - new_width) // 2)
+            old_y_offset = getattr(self, 'y_offset', (self.canvas_height - new_height) // 2)
+            
+            # NOW update to new dimensions
             self.image_width = new_width
             self.image_height = new_height
             self.x_offset = (self.canvas_width - new_width) // 2
             self.y_offset = (self.canvas_height - new_height) // 2
             
+            # Track old dimensions for scaling annotations (REMOVED - now done above)
+            # old_image_width = self.image_width if hasattr(self, 'image_width') else new_width
+            # old_image_height = self.image_height if hasattr(self, 'image_height') else new_height
+            # old_x_offset = self.x_offset if hasattr(self, 'x_offset') else self.x_offset
+            # old_y_offset = self.y_offset if hasattr(self, 'y_offset') else self.y_offset
+            
             # Display image
             self.current_image = img_resized
             self.current_image_tk = ImageTk.PhotoImage(img_resized)
-            self.canvas.delete("all")  # Clear the canvas
+            
+            # Only delete the PDF background, preserve annotations
+            self.canvas.delete("pdf_background")
             self.canvas.create_image(
-                self.x_offset, self.y_offset, anchor="nw", image=self.current_image_tk
+                self.x_offset, self.y_offset, anchor="nw", image=self.current_image_tk, tags="pdf_background"
             )
+            # Ensure background is behind all annotations
+            self.canvas.tag_lower("pdf_background")
+            
+            # Scale existing annotations if dimensions changed
+            if (old_image_width != new_width or old_image_height != new_height or 
+                old_x_offset != self.x_offset or old_y_offset != self.y_offset):
+                self.scale_annotations(old_image_width, old_image_height, old_x_offset, old_y_offset)
             
             # Send page change to ALL clients (view-only students should see page changes)
             buffer = io.BytesIO()
@@ -431,6 +485,112 @@ class CollaborativeWhiteboard:
             print(f"Displayed PDF page {page_num+1}/{self.total_pages}")
         except Exception as e:
             print(f"Error rendering PDF page: {e}")
+    
+    def on_window_resize(self, event):
+        """Handle window resize events to update canvas and re-render PDF."""
+        # Only handle resize for the root window
+        if event.widget != self.root:
+            return
+        
+        # Cancel any pending resize refresh
+        if self.resize_pending:
+            self.root.after_cancel(self.resize_pending)
+        
+        # Schedule a refresh after resizing stops (longer debounce for smoother resize)
+        self.resize_pending = self.root.after(300, self.refresh_canvas_size)
+    
+    def refresh_canvas_size(self):
+        """Update canvas dimensions and re-render PDF if loaded."""
+        self.resize_pending = False
+        
+        # Get actual canvas dimensions
+        new_width = self.canvas.winfo_width()
+        new_height = self.canvas.winfo_height()
+        
+        # Only update if dimensions are valid and have changed
+        if new_width > 1 and new_height > 1:
+            if new_width != self.canvas_width or new_height != self.canvas_height:
+                self.canvas_width = new_width
+                self.canvas_height = new_height
+                
+                # Re-render current PDF page if one is loaded
+                if self.pdf_document and hasattr(self, 'current_page'):
+                    self.render_pdf_page(self.current_page)
+    
+    def scale_annotations(self, old_width, old_height, old_x_offset, old_y_offset):
+        """Scale all annotations proportionally when canvas size changes."""
+        if old_width <= 0 or old_height <= 0:
+            return
+        
+        # Prevent concurrent scaling operations
+        if hasattr(self, '_scaling_in_progress') and self._scaling_in_progress:
+            return
+        
+        self._scaling_in_progress = True
+        
+        try:
+            # Calculate scale factors
+            scale_x = self.image_width / old_width
+            scale_y = self.image_height / old_height
+            
+            # Get all canvas items except the PDF background
+            all_items = self.canvas.find_all()
+            for item in all_items:
+                tags = self.canvas.gettags(item)
+                # Skip the PDF background
+                if "pdf_background" in tags:
+                    continue
+                
+                # Get item type
+                item_type = self.canvas.type(item)
+                
+                if item_type == "line":
+                    # Scale line coordinates
+                    coords = self.canvas.coords(item)
+                    new_coords = []
+                    for i in range(0, len(coords), 2):
+                        # Get original position relative to old PDF
+                        rel_x = (coords[i] - old_x_offset) * scale_x
+                        rel_y = (coords[i+1] - old_y_offset) * scale_y
+                        # Apply new offset
+                        new_x = rel_x + self.x_offset
+                        new_y = rel_y + self.y_offset
+                        new_coords.extend([new_x, new_y])
+                    self.canvas.coords(item, *new_coords)
+                    
+                    # Also scale line width
+                    old_width_val = self.canvas.itemcget(item, "width")
+                    if old_width_val:
+                        try:
+                            new_width_val = float(old_width_val) * min(scale_x, scale_y)
+                            self.canvas.itemconfig(item, width=new_width_val)
+                        except:
+                            pass
+                
+                elif item_type == "oval":
+                    # Scale oval (endpoint dots) coordinates
+                    coords = self.canvas.coords(item)
+                    if len(coords) == 4:
+                        x1, y1, x2, y2 = coords
+                        # Get center
+                        center_x = (x1 + x2) / 2
+                        center_y = (y1 + y2) / 2
+                        # Scale center position
+                        rel_x = (center_x - old_x_offset) * scale_x
+                        rel_y = (center_y - old_y_offset) * scale_y
+                        new_center_x = rel_x + self.x_offset
+                        new_center_y = rel_y + self.y_offset
+                        # Scale radius
+                        radius = (x2 - x1) / 2
+                        new_radius = radius * min(scale_x, scale_y)
+                        # Update coordinates
+                        self.canvas.coords(item, 
+                            new_center_x - new_radius, new_center_y - new_radius,
+                            new_center_x + new_radius, new_center_y + new_radius)
+        finally:
+            self._scaling_in_progress = False
+
+
     
     def next_page(self):
         """Display the next page of the PDF."""
@@ -502,7 +662,8 @@ class CollaborativeWhiteboard:
     def process_coordinates(self):
         """Process coordinates from the queue."""
         processed_count = 0
-        while not coordinates_queue.empty():
+        # Batch processing - limit to 20 coordinates per cycle for smooth UI
+        while not coordinates_queue.empty() and processed_count < 20:
             data = coordinates_queue.get()
             processed_count += 1
             # Coordinates are already normalized (0-1)
@@ -513,10 +674,11 @@ class CollaborativeWhiteboard:
             pen_color = data.get("pen_color", self.pen_color)
             self.draw_point(x, y, is_start, line_width, pen_color)
         
+        # Only update UI once per batch for better performance
         if processed_count > 0:
-            print(f"Processed {processed_count} student coordinates")
+            self.canvas.update_idletasks()
         
-        self.root.after(50, self.process_coordinates)
+        self.root.after(100, self.process_coordinates)
     
     def cleanup(self):
         """Clean up all resources when closing"""
