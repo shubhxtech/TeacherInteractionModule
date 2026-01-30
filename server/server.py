@@ -13,7 +13,7 @@ socketio = SocketIO(
     cors_allowed_origins="*",
     ping_timeout=120,
     ping_interval=25,
-    async_mode='gevent',  # Use gevent for better WebSocket stability
+    async_mode='threading',  # Use gevent for better WebSocket stability
     logger=False,
     engineio_logger=False
 )
