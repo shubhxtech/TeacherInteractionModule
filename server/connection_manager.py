@@ -8,34 +8,36 @@ class ConnectionRequestPanel:
         """Initialize the connection request panel."""
         self.parent = parent
         self.frame = Frame(parent, bg="#f0f0f0")
-        self.frame.pack(fill="both", expand=True, padx=5, pady=10)
+        self.frame.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Heading
+        # Heading with wrapping to prevent clipping
         header_frame = Frame(self.frame, bg="#f0f0f0")
-        header_frame.pack(fill="x", pady=5)
+        header_frame.pack(fill="x", pady=2)
         
-        Label(header_frame, text="Connection Requests", font=("Arial", 12, "bold"), bg="#f0f0f0").pack(side="left")
+        Label(header_frame, text="Connection Requests", font=("Arial", 11, "bold"), 
+              bg="#f0f0f0", wraplength=200).pack(side="left", padx=(0,5))
         
-        # Auto-approve toggle
-        self.auto_approve_var = BooleanVar(value=False) # Default to False for manual control
-        ttk.Checkbutton(header_frame, text="Auto-Approve", variable=self.auto_approve_var).pack(side="right", padx=5)
+        # Auto-approve toggle with smaller font
+        self.auto_approve_var = BooleanVar(value=False)
+        ttk.Checkbutton(header_frame, text="Auto", variable=self.auto_approve_var).pack(side="right")
 
-        # Status label
-        self.status_var = StringVar()
-        self.status_var.set("No pending requests")
-        self.status_label = Label(self.frame, textvariable=self.status_var, bg="#f0f0f0")
-        self.status_label.pack(pady=5)
+        # Status label with wrapping
+        self.status_var = StringVar(value="No pending requests")
+        self.status_label = Label(self.frame, textvariable=self.status_var, 
+                                 bg="#f0f0f0", font=("Arial", 9), wraplength=250)
+        self.status_label.pack(pady=2)
 
         # Request list frame with scrollbar
         list_frame = Frame(self.frame)
-        list_frame.pack(fill=BOTH, expand=True, pady=5)
+        list_frame.pack(fill=BOTH, expand=True, pady=2)
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(list_frame)
         scrollbar.pack(side=RIGHT, fill=Y)
 
-        # Request listbox
-        self.request_list = Listbox(list_frame, selectmode=MULTIPLE, height=8, width=25)
+        # Request listbox - responsive width, reduced height
+        self.request_list = Listbox(list_frame, selectmode=MULTIPLE, height=4, width=20,
+                                   font=("Arial", 9))
         self.request_list.pack(side=LEFT, fill=BOTH, expand=True)
 
         # Configure scrollbar
@@ -45,17 +47,18 @@ class ConnectionRequestPanel:
         # Bind selection event to show question
         self.request_list.bind("<<ListboxSelect>>", self.display_selected_question)
 
-        # Label to show selected question
-        self.question_label = Label(self.frame, text="Question: ", font=("Arial", 10), bg="#f8f8f8", wraplength=500, justify="left")
-        self.question_label.pack(fill="x", padx=5, pady=5)
+        # Label to show selected question with better wrapping
+        self.question_label = Label(self.frame, text="Question: ", font=("Arial", 9), 
+                                   bg="#f8f8f8", wraplength=250, justify="left")
+        self.question_label.pack(fill="x", padx=3, pady=3)
 
-        # Buttons
+        # Buttons - more compact layout
         button_frame = Frame(self.frame, bg="#f0f0f0")
-        button_frame.pack(fill="x", pady=5)
+        button_frame.pack(fill="x", pady=3)
 
-        ttk.Button(button_frame, text="Approve Selected", command=self.approve_selected).pack(side="left", padx=2)
-        ttk.Button(button_frame, text="Reject Selected", command=self.reject_selected).pack(side="left", padx=2)
-        ttk.Button(button_frame, text="Refresh", command=self.refresh_requests).pack(side="left", padx=2)
+        ttk.Button(button_frame, text="✓ Approve", command=self.approve_selected, width=10).pack(side="left", padx=1)
+        ttk.Button(button_frame, text="✗ Reject", command=self.reject_selected, width=10).pack(side="left", padx=1)
+        ttk.Button(button_frame, text="↻", command=self.refresh_requests, width=3).pack(side="left", padx=1)
 
         # Request storage
         self.pending_requests = []  # List of request dictionaries
@@ -213,12 +216,14 @@ class ConnectedClientPanel:
         """Initialize the connected client panel."""
         self.parent = parent
         self.frame = Frame(parent, bg="#f0f0f0")
-        self.frame.pack(fill="both", expand=True, padx=5, pady=10)
+        self.frame.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Heading
+        # Heading with wrapping
         header_frame = Frame(self.frame, bg="#f0f0f0")
-        header_frame.pack(fill="x", pady=5)
-        Label(header_frame, text="Active Students", font=("Arial", 12, "bold"), bg="#f0f0f0").pack(side="left")
+        header_frame.pack(fill="x", pady=2)
+        
+        Label(header_frame, text="Active Students", font=("Arial", 11, "bold"), 
+              bg="#f0f0f0", wraplength=200).pack(side="left")
 
         # Status label
         self.status_var = StringVar()
@@ -227,30 +232,30 @@ class ConnectedClientPanel:
 
         # List frame
         list_frame = Frame(self.frame)
-        list_frame.pack(fill=BOTH, expand=True, pady=5)
+        list_frame.pack(fill=BOTH, expand=True, pady=2)
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(list_frame)
         scrollbar.pack(side=RIGHT, fill=Y)
 
-        # Listbox
-        self.client_list = Listbox(list_frame, selectmode=MULTIPLE, height=6, width=25)
+        # Client listbox - responsive, reduced height
+        self.client_list = Listbox(list_frame, selectmode=MULTIPLE, height=4, width=20,
+                                  font=("Arial", 9))
         self.client_list.pack(side=LEFT, fill=BOTH, expand=True)
         self.client_list.config(yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.client_list.yview)
 
-        # Buttons
-        btn_frame = Frame(self.frame, bg="#f0f0f0")
-        btn_frame.pack(fill="x", pady=5)
+        # Buttons - compact layout
+        button_frame = Frame(self.frame, bg="#f0f0f0")
+        button_frame.pack(fill="x", pady=3)
 
-        ttk.Button(btn_frame, text="Disconnect Selected", command=self.disconnect_selected).pack(side="left", padx=2)
-        ttk.Button(btn_frame, text="Refresh List", command=self.refresh_list).pack(side="left", padx=2)
+        ttk.Button(button_frame, text="✗ Disconnect", command=self.disconnect_selected, width=12).pack(side="left", padx=1)
+        ttk.Button(button_frame, text="↻", command=self.refresh_list, width=3).pack(side="left", padx=1)
 
         # Store IDs
         self.index_to_sid = {} # {index: sid}
 
         # Auto-refresh
-        self.refresh_list()
 
     def refresh_list(self):
         """Refresh the list of connected clients."""

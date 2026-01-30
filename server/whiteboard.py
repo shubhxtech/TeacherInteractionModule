@@ -23,12 +23,12 @@ class CollaborativeWhiteboard:
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
         
-        # Calculate responsive sidebar width (15% of screen width, min 280, max 350)
-        sidebar_width = max(280, min(350, int(screen_width * 0.15)))
+        # Calculate responsive sidebar width (12% of screen width, min 260, max 320)
+        sidebar_width = max(260, min(320, int(screen_width * 0.12)))
         
         # Main frame
         self.main_frame = Frame(root)
-        self.main_frame.pack(fill="both", expand=True)
+        self.main_frame.pack(fill="both", expand=True, padx=2, pady=5)
         
         # Create left panel for tools and controls (responsive width)
         self.left_panel_container = Frame(self.main_frame, width=sidebar_width, bg="#f0f0f0")
@@ -83,7 +83,7 @@ class CollaborativeWhiteboard:
         
         # Create connection panel with modern styling
         self.connection_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
-        self.connection_frame.pack(fill="x", padx=10, pady=(10,5))
+        self.connection_frame.pack(fill="x", padx=5, pady=(10,5))
         
         Label(self.connection_frame, text="📡 Server Info", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
@@ -119,7 +119,7 @@ class CollaborativeWhiteboard:
         
         # Drawing Tools with modern styling
         self.drawing_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
-        self.drawing_frame.pack(fill="x", padx=10, pady=5)
+        self.drawing_frame.pack(fill="x", padx=5, pady=5)
         
         Label(self.drawing_frame, text="🎨 Drawing Tools", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
@@ -139,7 +139,7 @@ class CollaborativeWhiteboard:
         # Line Width with better styling
         Label(self.drawing_frame, text="Line Thickness:", font=("Arial", 9), bg="white").pack(pady=(8,2))
         width_frame = Frame(self.drawing_frame, bg="white")
-        width_frame.pack(fill="x", padx=15, pady=(0,8))
+        width_frame.pack(fill="x", padx=8, pady=(0,8))
         Scale(width_frame, from_=1, to=10, orient=HORIZONTAL, 
               command=self.set_line_width, bg="white", showvalue=True).pack(fill="x")
 
@@ -149,7 +149,7 @@ class CollaborativeWhiteboard:
         
         # PDF Controls with modern styling
         self.pdf_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
-        self.pdf_frame.pack(fill="x", padx=10, pady=5)
+        self.pdf_frame.pack(fill="x", padx=5, pady=5)
         
         Label(self.pdf_frame, text="📄 PDF Controls", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
@@ -174,7 +174,7 @@ class CollaborativeWhiteboard:
         
         # PDF Action Buttons - Better layout
         btn_container = Frame(self.pdf_frame, bg="white")
-        btn_container.pack(pady=4, padx=8)
+        btn_container.pack(pady=4, padx=4)
         
         ttk.Button(btn_container, text="📤 Upload PDF", command=self.upload_pdf).pack(side="left", padx=2)
         ttk.Button(btn_container, text="🗑️ Clear All", command=self.clear_all).pack(side="left", padx=2)
