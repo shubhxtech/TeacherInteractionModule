@@ -19,17 +19,25 @@ class CollaborativeWhiteboard:
         self.root.title("Collaborative Whiteboard with Voice Chat")
         self.host_ip = host_ip
         
+        # Detect screen size for responsive layout
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        
+        # Calculate responsive sidebar width (15% of screen width, min 280, max 350)
+        sidebar_width = max(280, min(350, int(screen_width * 0.15)))
+        
         # Main frame
         self.main_frame = Frame(root)
         self.main_frame.pack(fill="both", expand=True)
         
-        # Create left panel for tools and controls (fixed width to fit content)
-        self.left_panel_container = Frame(self.main_frame, width=320, bg="#f0f0f0")
+        # Create left panel for tools and controls (responsive width)
+        self.left_panel_container = Frame(self.main_frame, width=sidebar_width, bg="#f0f0f0")
         self.left_panel_container.pack(side="left", fill="y", padx=5, pady=5)
         self.left_panel_container.pack_propagate(False)  # Prevent shrinking
         
-        # Setup Scrollbar for left panel
-        self.left_canvas = Canvas(self.left_panel_container, width=300, bg="#f0f0f0", highlightthickness=0)
+        # Setup Scrollbar for left panel (use responsive width)
+        canvas_width = sidebar_width - 20  # Account for padding
+        self.left_canvas = Canvas(self.left_panel_container, width=canvas_width, bg="#f0f0f0", highlightthickness=0)
         self.left_scrollbar = ttk.Scrollbar(self.left_panel_container, orient="vertical", command=self.left_canvas.yview)
         
         self.scrollable_frame = Frame(self.left_canvas, bg="#f0f0f0")
@@ -691,8 +699,25 @@ def run_tkinter(host_ip):
     """Start the Tkinter GUI."""
     global whiteboard_instance
     root = Tk()
-    root.geometry("1400x800")
-    root.minsize(1200, 700)  # Minimum size to ensure UI is usable
+    
+    # Get screen dimensions for responsive sizing
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    
+    # Set window size to 80% of screen size (better for different displays)
+    window_width = int(screen_width * 0.8)
+    window_height = int(screen_height * 0.8)
+    
+    # Center the window
+    x_position = (screen_width - window_width) // 2
+    y_position = (screen_height - window_height) // 2
+    
+    root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
+    
+    # Set minimum size (60% of screen or absolute minimum)
+    min_width = max(1000, int(screen_width * 0.6))
+    min_height = max(600, int(screen_height * 0.6))
+    root.minsize(min_width, min_height)
     whiteboard_app = CollaborativeWhiteboard(root, host_ip)
     whiteboard_instance = whiteboard_app  # Set global reference
     
