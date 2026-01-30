@@ -15,7 +15,7 @@ class ConnectionRequestPanel:
         header_frame.pack(fill="x", pady=2)
         
         Label(header_frame, text="Connection Requests", font=("Arial", 11, "bold"), 
-              bg="#f0f0f0", wraplength=200).pack(side="left", padx=(0,5))
+              bg="#f0f0f0", wraplength=280).pack(side="left", padx=(0,5))
         
         # Auto-approve toggle with smaller font
         self.auto_approve_var = BooleanVar(value=False)
@@ -24,7 +24,7 @@ class ConnectionRequestPanel:
         # Status label with wrapping
         self.status_var = StringVar(value="No pending requests")
         self.status_label = Label(self.frame, textvariable=self.status_var, 
-                                 bg="#f0f0f0", font=("Arial", 9), wraplength=250)
+                                 bg="#f0f0f0", font=("Arial", 9), wraplength=280)
         self.status_label.pack(pady=2)
 
         # Request list frame with scrollbar
@@ -49,16 +49,13 @@ class ConnectionRequestPanel:
 
         # Label to show selected question with better wrapping
         self.question_label = Label(self.frame, text="Question: ", font=("Arial", 9), 
-                                   bg="#f8f8f8", wraplength=250, justify="left")
+                                   bg="#f8f8f8", wraplength=280, justify="left")
         self.question_label.pack(fill="x", padx=3, pady=3)
 
-        # Buttons - more compact layout
-        button_frame = Frame(self.frame, bg="#f0f0f0")
-        button_frame.pack(fill="x", pady=3)
-
-        ttk.Button(button_frame, text="✓ Approve", command=self.approve_selected, width=10).pack(side="left", padx=1)
-        ttk.Button(button_frame, text="✗ Reject", command=self.reject_selected, width=10).pack(side="left", padx=1)
-        ttk.Button(button_frame, text="↻", command=self.refresh_requests, width=3).pack(side="left", padx=1)
+        # Buttons - full width vertical stack
+        ttk.Button(self.frame, text="✓ Approve", command=self.approve_selected).pack(fill="x", padx=5, pady=1)
+        ttk.Button(self.frame, text="✗ Reject", command=self.reject_selected).pack(fill="x", padx=5, pady=1)
+        ttk.Button(self.frame, text="↻ Refresh", command=self.refresh_requests).pack(fill="x", padx=5, pady=1)
 
         # Request storage
         self.pending_requests = []  # List of request dictionaries
@@ -223,7 +220,7 @@ class ConnectedClientPanel:
         header_frame.pack(fill="x", pady=2)
         
         Label(header_frame, text="Active Students", font=("Arial", 11, "bold"), 
-              bg="#f0f0f0", wraplength=200).pack(side="left")
+              bg="#f0f0f0", wraplength=280).pack(side="left")
 
         # Status label
         self.status_var = StringVar()
@@ -245,12 +242,9 @@ class ConnectedClientPanel:
         self.client_list.config(yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.client_list.yview)
 
-        # Buttons - compact layout
-        button_frame = Frame(self.frame, bg="#f0f0f0")
-        button_frame.pack(fill="x", pady=3)
-
-        ttk.Button(button_frame, text="✗ Disconnect", command=self.disconnect_selected, width=12).pack(side="left", padx=1)
-        ttk.Button(button_frame, text="↻", command=self.refresh_list, width=3).pack(side="left", padx=1)
+        # Buttons - full width vertical stack
+        ttk.Button(self.frame, text="✗ Disconnect", command=self.disconnect_selected).pack(fill="x", padx=5, pady=1)
+        ttk.Button(self.frame, text="↻ Refresh", command=self.refresh_list).pack(fill="x", padx=5, pady=1)
 
         # Store IDs
         self.index_to_sid = {} # {index: sid}

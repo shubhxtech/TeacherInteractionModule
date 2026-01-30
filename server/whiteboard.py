@@ -23,8 +23,13 @@ class CollaborativeWhiteboard:
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
         
-        # Calculate responsive sidebar width (12% of screen width, min 260, max 320)
-        sidebar_width = max(260, min(320, int(screen_width * 0.12)))
+        # Calculate responsive sidebar width (optimized for cross-platform)
+        # 12% of screen width, min 270 for Mac compatibility, max 340
+        sidebar_width = max(270, min(340, int(screen_width * 0.12)))
+        
+        # Store for responsive components
+        self.sidebar_width = sidebar_width
+        self.content_width = sidebar_width - 40  # Account for padding and borders
         
         # Main frame
         self.main_frame = Frame(root)
@@ -88,27 +93,28 @@ class CollaborativeWhiteboard:
         Label(self.connection_frame, text="📡 Server Info", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
         
-        # IP Display with better styling
+        # IP Display with better styling and wrapping
         ip_frame = Frame(self.connection_frame, bg="white")
-        ip_frame.pack(pady=4)
-        Label(ip_frame, text="Server IP:", font=("Arial", 9), bg="white", fg="#7f8c8d").pack(side="left")
-        Label(ip_frame, text=f" {host_ip}", font=("Arial", 9, "bold"), 
-              bg="white", fg="#27ae60").pack(side="left")
+        ip_frame.pack(pady=4, fill="x", padx=5)
+        Label(ip_frame, text="Server IP:", font=("Arial", 9), bg="white", fg="#7f8c8d",
+              wraplength=self.content_width).pack(anchor="w")
+        Label(ip_frame, text=f"{host_ip}", font=("Arial", 9, "bold"), 
+              bg="white", fg="#27ae60", wraplength=self.content_width).pack(anchor="w")
         
-        # Connection Buttons
-        btn_frame = Frame(self.connection_frame, bg="#f0f0f0")
-        btn_frame.pack(fill="x", pady=5)
+        # Connection Buttons - full width
+        ttk.Button(self.connection_frame, text="Disconnect Voice", 
+                  command=self.disconnect_voice).pack(fill="x", padx=8, pady=2)
         
-        ttk.Button(btn_frame, text="Disconnect Voice", command=self.disconnect_voice).pack(side="left", padx=2)
-        
-        # Status display with better styling
+        # Status display with wrapping
         Label(self.connection_frame, textvariable=self.voice_chat.status_var,
-              font=("Arial", 8), bg="white", fg="#7f8c8d").pack(pady=2)
+              font=("Arial", 8), bg="white", fg="#7f8c8d", 
+              wraplength=self.content_width).pack(pady=2)
         
-        # Connected clients display
+        # Connected clients display with wrapping
         self.clients_var = StringVar(value="Connected Clients: 0")
         Label(self.connection_frame, textvariable=self.clients_var, 
-              font=("Arial", 9), bg="white", fg="#3498db").pack(pady=(2,8))
+              font=("Arial", 9), bg="white", fg="#3498db",
+              wraplength=self.content_width).pack(pady=(2,8))
         
         
         # Add connection request panel
@@ -124,10 +130,11 @@ class CollaborativeWhiteboard:
         Label(self.drawing_frame, text="🎨 Drawing Tools", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
         
-        # Pen Colors with emoji labels
-        Label(self.drawing_frame, text="Pen Color:", font=("Arial", 9), bg="white").pack(pady=(4,2))
+        # Pen Colors with emoji labels - responsive layout
+        Label(self.drawing_frame, text="Pen Color:", font=("Arial", 9), bg="white",
+              wraplength=self.content_width).pack(pady=(4,2))
         colors_frame = Frame(self.drawing_frame, bg="white")
-        colors_frame.pack(pady=4)
+        colors_frame.pack(pady=4, fill="x", padx=5)
         
         colors = [("⚫", "black"), ("🔴", "red"), ("🔵", "blue"), ("🟢", "green"), ("🟡", "yellow")]
         for emoji, col in colors:
@@ -136,8 +143,9 @@ class CollaborativeWhiteboard:
                         relief="raised", borderwidth=2)
             btn.pack(side="left", padx=2)
             
-        # Line Width with better styling
-        Label(self.drawing_frame, text="Line Thickness:", font=("Arial", 9), bg="white").pack(pady=(8,2))
+        # Line Width with wrapping
+        Label(self.drawing_frame, text="Line Thickness:", font=("Arial", 9), bg="white",
+              wraplength=self.content_width).pack(pady=(8,2))
         width_frame = Frame(self.drawing_frame, bg="white")
         width_frame.pack(fill="x", padx=8, pady=(0,8))
         Scale(width_frame, from_=1, to=10, orient=HORIZONTAL, 
@@ -172,12 +180,9 @@ class CollaborativeWhiteboard:
         
         ttk.Button(nav_frame, text="▶", width=3, command=self.next_page).pack(side="left", padx=2)
         
-        # PDF Action Buttons - Better layout
-        btn_container = Frame(self.pdf_frame, bg="white")
-        btn_container.pack(pady=4, padx=4)
-        
-        ttk.Button(btn_container, text="📤 Upload PDF", command=self.upload_pdf).pack(side="left", padx=2)
-        ttk.Button(btn_container, text="🗑️ Clear All", command=self.clear_all).pack(side="left", padx=2)
+        # PDF Action Buttons - Vertical stack to prevent clipping
+        ttk.Button(self.pdf_frame, text="📤 Upload PDF", command=self.upload_pdf).pack(fill="x", padx=8, pady=2)
+        ttk.Button(self.pdf_frame, text="🗑️ Clear All", command=self.clear_all).pack(fill="x", padx=8, pady=2)
         
         Frame(self.pdf_frame, bg="white", height=8).pack()  # Bottom padding
 
