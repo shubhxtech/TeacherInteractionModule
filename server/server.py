@@ -5,6 +5,7 @@ import base64
 import io
 import time
 import queue
+import threading
 
 # Flask App for Whiteboard
 app = Flask(__name__)
@@ -18,15 +19,17 @@ socketio = SocketIO(
     engineio_logger=False
 )
 
-# Queue for coordinates
-coordinates_queue = queue.Queue()
+# Queue for coordinates (bounded to prevent memory leak)
+coordinates_queue = queue.Queue(maxsize=1000)
 
 # Connection management
 connection_requests = queue.Queue()
 connected_clients = set()
+connected_clients_lock = threading.Lock()  # Thread-safe access
 
 # Client viewports information
 client_viewports = {}
+client_viewports_lock = threading.Lock()  # Thread-safe access
 
 @app.route("/")
 def index():
@@ -103,9 +106,17 @@ def handle_coordinates(data):
     """Handle incoming coordinates from clients."""
     client_id = request.sid
     
-    # Only process if client is approved
-    if client_id in connected_clients:
-        coordinates_queue.put(data)
+    # Only process if client is approved (thread-safe check)
+    with connected_clients_lock:
+        is_approved = client_id in connected_clients
+    
+    if is_approved:
+        try:
+            coordinates_queue.put(data, block=False)
+        except queue.Full:
+            print(f"Warning: Coordinate queue full, dropping packet from {client_id}")
+            return
+        
         # Broadcast to all other approved clients
         socketio.emit("coordinate_update", data, skip_sid=request.sid)
     else:
@@ -114,14 +125,18 @@ def handle_coordinates(data):
 @socketio.on("register_viewport")
 def handle_viewport_registration(data):
     """Handle client viewport registration."""
-    client_id = request.sid  # Socket ID for this client
+    client_id = request.sid
     
-    # Only process if client is approved
-    if client_id in connected_clients:
+    # Only process if client is approved (thread-safe check)
+    with connected_clients_lock:
+        is_approved = client_id in connected_clients
+    
+    if is_approved:
         width = data.get("width", 0)
         height = data.get("height", 0)
-        client_viewports[client_id] = {"width": width, "height": height}
-        # print(f"Client {client_id} registered viewport: {width}x{height}")
+        
+        with client_viewports_lock:
+            client_viewports[client_id] = {"width": width, "height": height}
 
 @socketio.on("client_disconnect")
 def handle_client_disconnect():
@@ -129,10 +144,16 @@ def handle_client_disconnect():
     client_id = request.sid
     print(f"Client {client_id} requested disconnect")
     
-    # Remove from connected clients
-    if client_id in connected_clients:
-        connected_clients.remove(client_id)
-        print(f"Removed {client_id} from connected_clients")
+    # Remove from connected clients (thread-safe)
+    with connected_clients_lock:
+        if client_id in connected_clients:
+            connected_clients.remove(client_id)
+            print(f"Removed {client_id} from connected_clients")
+    
+    # Remove from viewports (thread-safe)
+    with client_viewports_lock:
+        if client_id in client_viewports:
+            del client_viewports[client_id]
     
     # Disconnect voice chat
     try:
@@ -147,9 +168,14 @@ def handle_client_disconnect():
 def handle_disconnect():
     """Clean up when client disconnects."""
     client_id = request.sid
-    if client_id in client_viewports:
-        del client_viewports[client_id]
     
-    if client_id in connected_clients:
-        connected_clients.remove(client_id)
-        print(f"Client {client_id} disconnected, removed from approved clients")
+    # Clean up viewport (thread-safe)
+    with client_viewports_lock:
+        if client_id in client_viewports:
+            del client_viewports[client_id]
+    
+    # Remove from connected clients (thread-safe)
+    with connected_clients_lock:
+        if client_id in connected_clients:
+            connected_clients.remove(client_id)
+            print(f"Client {client_id} disconnected, removed from approved clients")

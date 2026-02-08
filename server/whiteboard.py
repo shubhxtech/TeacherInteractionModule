@@ -185,6 +185,13 @@ class CollaborativeWhiteboard:
         ttk.Button(self.pdf_frame, text="🗑️ Clear All", command=self.clear_all).pack(fill="x", padx=8, pady=2)
         
         Frame(self.pdf_frame, bg="white", height=8).pack()  # Bottom padding
+        
+        # Add extra spacer at the very end to ensure everything is scrollable
+        Frame(self.left_panel, bg="#f0f0f0", height=50).pack(fill="x")
+        
+        # Force update of scroll region after all widgets are added
+        self.root.update_idletasks()
+        self.left_canvas.configure(scrollregion=self.left_canvas.bbox("all"))
 
         
         # Drawing variables

@@ -1,7 +1,7 @@
 import time
-from tkinter import Frame, Label, Listbox, Button, MULTIPLE, StringVar, BooleanVar, RIGHT, LEFT, BOTH, Y
+from tkinter import *
 from tkinter import ttk
-from server import connection_requests, connected_clients, socketio
+from server import connection_requests, connected_clients, connected_clients_lock, socketio
 
 class ConnectionRequestPanel:
     def __init__(self, parent):
@@ -90,11 +90,18 @@ class ConnectionRequestPanel:
             request = connection_requests.get()
             client_id = request["client_id"]
             
-            if client_id not in connected_clients:
+            # Thread-safe check
+            with connected_clients_lock:
+                already_connected = client_id in connected_clients
+            
+            if not already_connected:
                 # Check for auto-approval
                 if self.auto_approve_var.get():
                     client_ip = request["client_ip"]
-                    connected_clients.add(client_id)
+                    
+                    with connected_clients_lock:
+                        connected_clients.add(client_id)
+                    
                     socketio.emit("allow_student", {"allowed_sid": client_id})
                     socketio.emit("connection_approved", room=client_id)
                     print(f"Auto-approved connection from {client_ip} (ID: {client_id})")
@@ -153,7 +160,10 @@ class ConnectionRequestPanel:
             client_id = request_data["client_id"]
             client_ip = request_data["client_ip"]
             
-            connected_clients.add(client_id)
+            # Add to connected clients (thread-safe)
+            with connected_clients_lock:
+                connected_clients.add(client_id)
+            
             socketio.emit("allow_student", {"allowed_sid": client_id})
             socketio.emit("connection_approved", room=client_id)
             
@@ -290,9 +300,10 @@ class ConnectedClientPanel:
             if sid:
                 print(f"Revoking permissions for student: {sid}")
                 try:
-                    # Remove from connected_clients (revoke edit permission)
-                    if sid in connected_clients:
-                        connected_clients.remove(sid)
+                    # Remove from connected_clients (revoke edit permission) - thread-safe
+                    with connected_clients_lock:
+                        if sid in connected_clients:
+                            connected_clients.remove(sid)
                     
                     # Notify client their permission was revoked
                     socketio.emit("force_disconnect", room=sid)
