@@ -24,52 +24,77 @@ class CollaborativeWhiteboard:
         screen_height = root.winfo_screenheight()
         
         # Calculate responsive sidebar width (optimized for cross-platform)
-        # 12% of screen width, min 270 for Mac compatibility, max 340
-        sidebar_width = max(270, min(340, int(screen_width * 0.12)))
+        # Increased to 360px minimum to ensure adequate space for controls + scrollbar with padding
+        # 16% of screen width, min 360, max 420
+        sidebar_width = max(360, min(420, int(screen_width * 0.16)))
         
-        # Store for responsive components
+        # Store for responsive components - reduced content width to account for scrollbar
         self.sidebar_width = sidebar_width
-        self.content_width = sidebar_width - 40  # Account for padding and borders
+        self.content_width = sidebar_width - 50  # Extra space for scrollbar and padding
         
-        # Main frame
+        # Main frame - use grid for better layout control
         self.main_frame = Frame(root)
         self.main_frame.pack(fill="both", expand=True, padx=2, pady=5)
         
+        # Configure grid weights to ensure proper space allocation
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=0, minsize=sidebar_width)  # Left panel fixed width
+        self.main_frame.grid_columnconfigure(1, weight=1)  # Right panel expands
+        
         # Create left panel for tools and controls (responsive width)
         self.left_panel_container = Frame(self.main_frame, width=sidebar_width, bg="#f0f0f0")
-        self.left_panel_container.pack(side="left", fill="y", padx=5, pady=5)
-        self.left_panel_container.pack_propagate(False)  # Prevent shrinking
+        self.left_panel_container.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        self.left_panel_container.grid_propagate(False)  # Prevent shrinking
         
-        # Setup Scrollbar for left panel (use responsive width)
-        canvas_width = sidebar_width - 20  # Account for padding
-        self.left_canvas = Canvas(self.left_panel_container, width=canvas_width, bg="#f0f0f0", highlightthickness=0)
+        # Create a simple scrollable canvas setup
+        self.left_canvas = Canvas(self.left_panel_container, bg="#f0f0f0", highlightthickness=0)
         self.left_scrollbar = ttk.Scrollbar(self.left_panel_container, orient="vertical", command=self.left_canvas.yview)
         
+        # Frame inside canvas for content
         self.scrollable_frame = Frame(self.left_canvas, bg="#f0f0f0")
         self.scrollable_frame.bind(
             "<Configure>",
             lambda e: self.left_canvas.configure(scrollregion=self.left_canvas.bbox("all"))
         )
         
-        self.left_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        # Calculate width for canvas window (account for scrollbar ~20px)
+        # This prevents content from extending under the scrollbar
+        content_area_width = sidebar_width - 20  # Subtract scrollbar width
+        
+        # Create canvas window with explicit width to prevent scrollbar overlap
+        self.canvas_window_id = self.left_canvas.create_window(
+            (0, 0), 
+            window=self.scrollable_frame, 
+            anchor="nw",
+            width=content_area_width  # CRITICAL: Set width to prevent overlap
+        )
         self.left_canvas.configure(yscrollcommand=self.left_scrollbar.set)
+        
+        # Bind canvas resize to update window width dynamically
+        def update_canvas_window_width(event=None):
+            # Get actual canvas width and update window width
+            canvas_width = self.left_canvas.winfo_width()
+            if canvas_width > 1:  # Valid width
+                self.left_canvas.itemconfig(self.canvas_window_id, width=canvas_width)
+        
+        self.left_canvas.bind("<Configure>", update_canvas_window_width)
         
         # Enable mouse wheel scrolling
         def on_mousewheel(event):
             self.left_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
-        # Bind mouse wheel to canvas and all child widgets
         self.left_canvas.bind_all("<MouseWheel>", on_mousewheel)
         
-        self.left_canvas.pack(side="left", fill="both", expand=True)
+        # Pack scrollbar and canvas - scrollbar on right
         self.left_scrollbar.pack(side="right", fill="y")
+        self.left_canvas.pack(side="left", fill="both", expand=True)
         
         # Use scrollable_frame as the parent for all controls
         self.left_panel = self.scrollable_frame
         
         # Create right panel for canvas (takes remaining space)
         self.right_panel = Frame(self.main_frame, bg="white")
-        self.right_panel.pack(side="right", fill="both", expand=True)
+        self.right_panel.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
         
         # Canvas Setup - Make it fully responsive
         self.canvas = Canvas(self.right_panel, bg="white", highlightthickness=0)
@@ -88,7 +113,7 @@ class CollaborativeWhiteboard:
         
         # Create connection panel with modern styling
         self.connection_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
-        self.connection_frame.pack(fill="x", padx=5, pady=(10,5))
+        self.connection_frame.pack(fill="x", padx=(5,30), pady=(10,5))  # Extra right padding for scrollbar
         
         Label(self.connection_frame, text="📡 Server Info", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
@@ -125,7 +150,7 @@ class CollaborativeWhiteboard:
         
         # Drawing Tools with modern styling
         self.drawing_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
-        self.drawing_frame.pack(fill="x", padx=5, pady=5)
+        self.drawing_frame.pack(fill="x", padx=(5,30), pady=5)  # Extra right padding for scrollbar
         
         Label(self.drawing_frame, text="🎨 Drawing Tools", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
@@ -157,7 +182,7 @@ class CollaborativeWhiteboard:
         
         # PDF Controls with modern styling
         self.pdf_frame = Frame(self.left_panel, bg="white", relief="solid", borderwidth=1)
-        self.pdf_frame.pack(fill="x", padx=5, pady=5)
+        self.pdf_frame.pack(fill="x", padx=(5,30), pady=5)  # Extra right padding for scrollbar
         
         Label(self.pdf_frame, text="📄 PDF Controls", font=("Arial", 11, "bold"), 
               bg="white", fg="#2c3e50").pack(pady=(8,4))
